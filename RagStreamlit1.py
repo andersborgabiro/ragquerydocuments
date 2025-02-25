@@ -62,6 +62,7 @@ def main():
     # OpenAI API key: via the OPENAI_API_KEY environment variable or input
     openai_api_key = os.getenv("OPENAI_API_KEY", "")
     if openai_api_key == "":
+        st.header("🔑 OpenAI API Key")
         openai_api_key = st.text_input("Enter your API key (not shown):", type="password")
         st.button("Save the API Key")
 
