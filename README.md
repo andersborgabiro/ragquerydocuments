@@ -1,5 +1,5 @@
-# ragstreamlit1
-This is a simple application that evaluates RAG and Streamlit.
+# RagStreamlit1 - Query Documents
+RagStreamlit1 is a simple application that evaluates RAG and Streamlit.
 
 Bring-Your-Own-Key applies. You get no freebies from me.
 
