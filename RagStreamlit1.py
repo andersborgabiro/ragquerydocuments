@@ -62,7 +62,12 @@ def main():
     # OpenAI API key: via the OPENAI_API_KEY environment variable or input
     openai_api_key = os.getenv("OPENAI_API_KEY", "")
     if openai_api_key == "":
-        openai_api_key = st.text_input("Enter your API key (not shown):", type="password")     
+        openai_api_key = st.text_input("Enter your API key (not shown):", type="password")
+        st.button("Save the API Key")
+
+    if openai_api_key == "":
+        st.write("Enter a valid OpenAI API Key")
+        return
 
     # Initialize session state for embeddings and FAISS index
     if 'embeddings' not in st.session_state:
