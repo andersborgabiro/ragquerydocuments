@@ -5,8 +5,6 @@ Bring-Your-Own-Key applies. You get no freebies from me.
 
 GPT-4o seems to provide the best results, but GPT-4o Mini is probably sufficient for basic queries and is less expensive.
 
-Check Verbose to see the prompt used with the LLM.
-
 The application is accessible here: https://ragquerydocument.streamlit.app/. This might change at any time.
 
 No guarantees for it not breaking in the future, but any obvious bugs should be ironed out before I update the code here.
