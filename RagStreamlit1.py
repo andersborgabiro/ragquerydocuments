@@ -15,7 +15,7 @@ import streamlit as st
 
 # https://www.langchain.com/
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 # https://faiss.ai/
 # https://faiss.ai/cpp_api/struct/structfaiss_1_1IndexFlatL2.html
