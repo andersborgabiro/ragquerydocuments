@@ -15,4 +15,5 @@ Considered improvements:
 - Selection of model
 - Selection of chunk size and overlap
 - Possible to modify instructions
+
 All this can of course be changed in the code.
