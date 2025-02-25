@@ -8,3 +8,5 @@ GPT-4o seems to provide the best results, but GPT-4o Mini is probably sufficient
 Check Verbose to see the prompt used with the LLM.
 
 The applications is accessible here: https://ragquerydocument.streamlit.app/.
+
+No guarantees for it not breaking in the future, but any obvious bugs should be ironed out before I update the code here.
