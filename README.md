@@ -1,5 +1,5 @@
 # ragstreamlit1
-Application that evaluates RAG and Streamlit.
+This is a simple application that evaluates RAG and Streamlit.
 
 This is a Bring-Your-Own-Key application. You get no freebies from me.
 
