@@ -15,6 +15,8 @@ import streamlit as st
 
 # https://www.langchain.com/
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# https://python.langchain.com/docs/integrations/text_embedding/openai/
 from langchain_openai import OpenAIEmbeddings
 
 # https://faiss.ai/
@@ -42,15 +44,14 @@ import pypandoc
 # https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 from bs4 import BeautifulSoup
 
-# Built-in libraries for JSON and XML
+# https://docs.python.org/3/library/json.html
 import json
+
+# https://docs.python.org/3/library/xml.etree.elementtree.html
 import xml.etree.ElementTree as ET
 
 # Configuration
 # https://docs.streamlit.io/develop/api-reference/configuration/config.toml
-
-# For future
-# https://python.langchain.com/docs/integrations/text_embedding/openai/
 
 
 def main():
@@ -312,7 +313,7 @@ def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
 def query_openai(client, prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
             temperature=0.1,
