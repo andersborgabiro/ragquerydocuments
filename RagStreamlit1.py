@@ -11,6 +11,7 @@ import os
 import time
 
 # https://streamlit.io/
+# https://docs.streamlit.io/develop/api-reference/text
 import streamlit as st
 
 # https://www.langchain.com/
@@ -65,7 +66,7 @@ def main():
     if openai_api_key == "":
         st.header("🔑 OpenAI API Key")
         openai_api_key = st.text_input("Enter your API key (not shown):", type="password")
-        st.button("Save the API Key")
+        st.button("Set")
 
     if openai_api_key == "":
         st.write("Enter a valid OpenAI API Key")
@@ -73,13 +74,10 @@ def main():
 
     # Initialize session state for embeddings and FAISS index
     if 'embeddings' not in st.session_state:
-        st.session_state.embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        st.session_state.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
 
     if 'faiss_index' not in st.session_state:
-        # Initialize FAISS index with the dimensionality from embeddings
-        embedding_test = st.session_state.embeddings.embed_query("test")
-        embedding_dim = len(embedding_test)
-        st.session_state.faiss_index = faiss.IndexFlatL2(embedding_dim)
+        init_faiss_index()
 
     if 'texts' not in st.session_state:
         st.session_state.texts = []
@@ -93,6 +91,11 @@ def main():
     # Sidebar for uploading files
     st.sidebar.header("Upload Files")
     uploaded_files = st.sidebar.file_uploader("Choose files", type=["pdf", "txt", "md", "rtf", "docx", "pptx", "xlsx", "html", "htm", "json", "xml"], accept_multiple_files=True)
+
+    if (len(uploaded_files) < len(st.session_state.processed_files)):
+        st.session_state.processed_files = set()        
+        init_faiss_index()
+
     if uploaded_files:
         for uploaded_file in uploaded_files:
             if uploaded_file.name not in st.session_state.processed_files:
@@ -114,9 +117,6 @@ def main():
     # Optional: Show number of indexed chunks
     st.sidebar.write(f"**Total Indexed Chunks:** {st.session_state.faiss_index.ntotal}")
 
-    # TODO Evaluate Streamlit features
-    #streamlit_evaluate()
-
     # Bail if no files uploaded
     if st.session_state.faiss_index.ntotal == 0:
         st.info("Please upload files to start querying.")
@@ -127,14 +127,19 @@ def main():
     user_query = st.text_input("Type your question here:")
     verbose = st.checkbox("Verbose", help="Check this if you want intermediate information")
 
-    if st.button("Get Answer") and user_query:
-        with st.spinner("Generating answer..."):
+    if st.button("Query") and user_query:
+        with st.spinner("Querying..."):
             client = OpenAI(api_key=openai_api_key)
             answer = generate_answer(client, user_query, verbose, st.session_state.embeddings, st.session_state.faiss_index, st.session_state.texts)
         
         st.header("👨‍🏫 Answer")
         st.write(answer)
 
+# Initialize FAISS index with the dimensionality from embeddings
+def init_faiss_index():
+    embedding_test = st.session_state.embeddings.embed_query("test")
+    embedding_dim = len(embedding_test)
+    st.session_state.faiss_index = faiss.IndexFlatL2(embedding_dim)
 
 # Extract text from a file based on its type
 def extract_text_from_file(file) -> str:
@@ -279,14 +284,20 @@ def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
     query_embedding_np = np.array([query_embedding]).astype('float32')
 
     # Number of top documents to retrieve
-    k = 10
+    k = 20
 
     # Search FAISS index
-    # TODO Why are duplicates included?
-    D, I = faiss_index.search(query_embedding_np, k)
+    # TODO Why are duplicates included? Same phrase multiple times?
+    distances, indices = faiss_index.search(query_embedding_np, k)
 
-    # Build array of text snippets
-    retrieved_texts = [texts[idx] for idx in I[0] if idx < len(texts)]
+    if verbose:
+        st.header("🔎 Search")
+        distances
+        indices
+
+    # Build array of text snippets with lowest distances
+    # TODO Combine snippets if they are adjacent (remove overlap)
+    retrieved_texts = [texts[idx] for idx in indices[0] if idx < len(texts)]
 
     if not retrieved_texts:
         return "No relevant information found in the uploaded documents."
@@ -296,14 +307,14 @@ def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
 
     # Prompt
     prompt = (
-        "You are an AI assistant. Use the information provided below to answer the question. If the question is given in a non-English language use that language in the response.\n\n"
+        "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response. If the question is given in a non-English language use that language in the response.\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {query}\n"
     )
 
     if verbose:
         st.header("👨‍🎨 Prompt")
-        st.write(prompt)
+        st.text(prompt)
 
     # Generate the answer using OpenAI's GPT model
     return query_openai(client, prompt)
@@ -315,7 +326,7 @@ def query_openai(client, prompt):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
+            max_tokens=4000,
             temperature=0.1,
             top_p=1,
             frequency_penalty=0,
@@ -324,74 +335,6 @@ def query_openai(client, prompt):
         return response.choices[0].message.content
     except Exception as e:
         return f"Error generating answer: {e}"
-
-
-# https://docs.streamlit.io/get-started/fundamentals/main-concepts
-def streamlit_evaluate():
-    chart_data = pd.DataFrame(
-        np.random.randn(20, 3),
-        columns=['a', 'b', 'c'])
-
-    st.line_chart(chart_data)
-
-    map_data = pd.DataFrame(
-    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-    columns=['lat', 'lon'])
-
-    st.map(map_data)    
-
-    x = st.slider('x')  # 👈 this is a widget
-    st.write(x, 'squared is', x * x)        
-
-    st.text_input("Your name", key="name")
-
-    # You can access the value at any point with:
-    st.session_state.name
-
-    
-    if st.checkbox('Show dataframe'):
-        chart_data = pd.DataFrame(
-        np.random.randn(20, 3),
-        columns=['a', 'b', 'c'])
-
-        chart_data
-
-    df = pd.DataFrame({
-        'first column': [1, 2, 3, 4],
-        'second column': [10, 20, 30, 40]
-        })
-
-    option = st.selectbox(
-        'Which number do you like best?',
-        df['first column'])
-
-    'You selected: ', option       
-
-    # Add a selectbox to the sidebar:
-    add_selectbox = st.sidebar.selectbox(
-        'How would you like to be contacted?',
-        ('Email', 'Home phone', 'Mobile phone')
-    )
-
-    # Add a slider to the sidebar:
-    add_slider = st.sidebar.slider(
-        'Select a range of values',
-        0.0, 100.0, (25.0, 75.0)
-    )     
-
-    'Starting a long computation...'
-
-    # Add a placeholder
-    latest_iteration = st.empty()
-    bar = st.progress(0)
-
-    for i in range(100):
-        # Update the progress bar with each iteration.
-        latest_iteration.text(f'Iteration {i+1}')
-        bar.progress(i + 1)
-        time.sleep(0.1)
-
-    '...and now we\'re done!'
 
 
 main()
