@@ -10,6 +10,9 @@ import os
 # https://docs.python.org/3/library/time.html
 import time
 
+# https://docs.python.org/3/library/datetime.html
+from datetime import datetime
+
 # https://streamlit.io/
 # https://docs.streamlit.io/develop/api-reference/text
 import streamlit as st
@@ -69,7 +72,7 @@ def main():
         st.button("Set")
 
     if openai_api_key == "":
-        st.write("Enter a valid OpenAI API Key")
+        st.info("Enter a valid OpenAI API Key.", icon="ℹ️")
         return
 
     # Initialize session state for embeddings and FAISS index
@@ -119,7 +122,7 @@ def main():
 
     # Bail if no files uploaded
     if st.session_state.faiss_index.ntotal == 0:
-        st.info("Please upload files to start querying.")
+        st.info("Please upload files to start querying.", icon="ℹ️")
         return
 
     # Query input
@@ -134,6 +137,7 @@ def main():
         
         st.header("👨‍🏫 Answer")
         st.write(answer)
+
 
 # Initialize FAISS index with the dimensionality from embeddings
 def init_faiss_index():
@@ -337,4 +341,29 @@ def query_openai(client, prompt):
         return f"Error generating answer: {e}"
 
 
+# Main
+
 main()
+
+# Footer
+
+current_year = datetime.now().year
+
+st.markdown(f"""
+<style>
+    .footer {{
+
+    }}
+    .footer-link {{
+        color: inherit;
+    }}
+</style>            
+
+<hr/>
+            
+<footer class="footer">
+    © {current_year} <a href="https://abiro.com" target="_blank" class="footer-link">Abiro</a> All rights reserved. 
+    <a href="https://abiro.com/about/privacy-policy/" target="_blank" class="footer-link">Privacy Policy</a>. 
+    <a href="https://apps.abiro.com/" target="_blank" class="footer-link">Other Applications</a>.
+</footer>
+""", unsafe_allow_html=True)
