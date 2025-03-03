@@ -77,7 +77,7 @@ def main():
         st.info("Enter a valid OpenAI API Key.", icon="ℹ️")
         return
 
-    st.header("⚙ OpenAI Configuration")
+    st.sidebar.header("Configuration")
 
     # Embedding model options with display names and values
     embedding_options = {
