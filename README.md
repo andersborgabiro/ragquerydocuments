@@ -7,7 +7,7 @@ GPT-4o seems to provide the best results, but GPT-4o Mini is probably sufficient
 
 The application is accessible here: https://ragquerydocuments.streamlit.app/. This might change at any time.
 
-No guarantees for it not breaking in the future, but any obvious bugs should be ironed out before I update the code here.
+No guarantees for it not breaking in the future, but the code is verified locally before updating it here, Contact me if you find something.
 
 Considered improvements:
 - Selection of model
