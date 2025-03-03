@@ -64,6 +64,8 @@ def main():
     st.title("📄 Query Documents")
     st.markdown("Upload your documents (PDF, RTF, Word, PowerPoint, Excel, Text, Markdown, HTML, XML or JSON), and ask questions based on their content. The system will only use information from the uploaded files to answer your queries. The provided API Key, set via OPENAI_API_KEY or manually, is only used for queries and not otherwise stored.")
 
+    # AI configuration
+
     # OpenAI API key: via the OPENAI_API_KEY environment variable or input
     openai_api_key = os.getenv("OPENAI_API_KEY", "")
     if openai_api_key == "":
@@ -75,9 +77,51 @@ def main():
         st.info("Enter a valid OpenAI API Key.", icon="ℹ️")
         return
 
+    st.header("⚙ OpenAI Configuration")
+
+    # Embedding model options with display names and values
+    embedding_options = {
+        "Embedding 3 small": "text-embedding-3-small",
+        "Embedding 3 large": "text-embedding-3-large",
+    }
+    selected_embedding_display_default = 0
+    selected_embedding_display = st.sidebar.selectbox("Embedding Model", list(embedding_options.keys()), index=selected_embedding_display_default)
+    selected_embedding_value = embedding_options[selected_embedding_display]
+
+    # GPT Model options with display names and values
+    gpt_options = {
+        "O1": "o1",
+        "O1 Preview": "o1-preview",
+        "O1 Mini": "o1-mini",
+        "GPT-4o": "gpt-4o",
+        "GPT-4o Mini": "gpt-4o-mini",
+        "GPT-4 Turbo": "gpt-4-turbo",
+        "GPT-4": "gpt-4",
+        "GPT-3.5 Turbo": "gpt-3.5-turbo"
+    }
+    selected_gpt_display_default = 4
+    selected_gpt_display = st.sidebar.selectbox("GPT Model", list(gpt_options.keys()), index=selected_gpt_display_default)
+    selected_gpt_value = gpt_options[selected_gpt_display]
+
+    # Set the temperature
+    temperature_default = 0.1
+    temperature = st.sidebar.slider("Temperature", 0.0, 1.0, temperature_default, 0.1)
+
+    # Input for instructions
+    instructions_default = "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response. If the question is given in a non-English language use that language in the response."
+    instructions = st.sidebar.text_area("Instructions", instructions_default)
+
+    # RAG chunk size
+    rag_chunk_size_default = 1000
+    rag_chunk_size = st.sidebar.number_input("RAG Chunk Size", min_value=100, max_value=10000, value=rag_chunk_size_default)
+
+    # RAG chunk overlap
+    rag_chunk_overlap_default = 100
+    rag_chunk_overlap = st.sidebar.number_input("RAG Chunk Overlap", min_value=10, max_value=1000, value=rag_chunk_overlap_default)
+
     # Initialize session state for embeddings and FAISS index
     if 'embeddings' not in st.session_state:
-        st.session_state.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
+        st.session_state.embeddings = OpenAIEmbeddings(model=selected_embedding_value, openai_api_key=openai_api_key)
 
     if 'faiss_index' not in st.session_state:
         init_faiss_index()
@@ -107,7 +151,7 @@ def main():
                 text = extract_text_from_file(uploaded_file)
                 if text:
                     # Split text into chunks
-                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=rag_chunk_size, chunk_overlap=rag_chunk_overlap)
                     chunks = text_splitter.split_text(text)
                     add_texts_to_faiss(chunks, st.session_state.embeddings)
                     st.sidebar.success(f"Processed {uploaded_file.name} successfully!")
@@ -133,7 +177,7 @@ def main():
     if st.button("Query") and user_query:
         with st.spinner("Querying..."):
             client = OpenAI(api_key=openai_api_key)
-            answer = generate_answer(client, user_query, verbose, st.session_state.embeddings, st.session_state.faiss_index, st.session_state.texts)
+            answer = generate_answer(client, selected_gpt_value, temperature, instructions, user_query, verbose, st.session_state.embeddings, st.session_state.faiss_index, st.session_state.texts)
         
         st.header("👨‍🏫 Answer")
         st.write(answer)
@@ -282,7 +326,7 @@ def add_texts_to_faiss(texts, embeddings):
 
 
 # Generate an answer based on the query and retrieved texts.
-def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
+def generate_answer(client, model, temperature, instructions, query, verbose, embeddings, faiss_index, texts):
     # Embed the query
     query_embedding = embeddings.embed_query(query)
     query_embedding_np = np.array([query_embedding]).astype('float32')
@@ -311,7 +355,7 @@ def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
 
     # Prompt
     prompt = (
-        "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response. If the question is given in a non-English language use that language in the response.\n\n"
+        instructions + "\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {query}\n"
     )
@@ -321,20 +365,19 @@ def generate_answer(client, query, verbose, embeddings, faiss_index, texts):
         st.text(prompt)
 
     # Generate the answer using OpenAI's GPT model
-    return query_openai(client, prompt)
+    return query_openai(client, model, temperature, prompt)
 
 
 # Query OpenAI API
-def query_openai(client, prompt):
+def query_openai(client, model, temperature, prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=4000,
-            temperature=0.1,
+            model=model,
+            temperature=temperature,
             top_p=1,
             frequency_penalty=0,
             presence_penalty=0,
+            messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
     except Exception as e:
