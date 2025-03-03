@@ -88,6 +88,14 @@ def main():
     selected_embedding_display = st.sidebar.selectbox("Embedding Model", list(embedding_options.keys()), index=selected_embedding_display_default)
     selected_embedding_value = embedding_options[selected_embedding_display]
 
+    # RAG chunk size
+    rag_chunk_size_default = 1000
+    rag_chunk_size = st.sidebar.number_input("Embedding Chunk Size", min_value=100, max_value=10000, value=rag_chunk_size_default)
+
+    # RAG chunk overlap
+    rag_chunk_overlap_default = 100
+    rag_chunk_overlap = st.sidebar.number_input("Embedding Chunk Overlap", min_value=10, max_value=1000, value=rag_chunk_overlap_default)    
+
     # GPT Model options with display names and values
     gpt_options = {
         "O1": "o1",
@@ -105,19 +113,11 @@ def main():
 
     # Set the temperature
     temperature_default = 0.1
-    temperature = st.sidebar.slider("Temperature", 0.0, 1.0, temperature_default, 0.1)
+    temperature = st.sidebar.slider("GPT Temperature", 0.0, 1.0, temperature_default, 0.1)
 
     # Input for instructions
     instructions_default = "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response. If the question is given in a non-English language use that language in the response."
-    instructions = st.sidebar.text_area("Instructions", instructions_default)
-
-    # RAG chunk size
-    rag_chunk_size_default = 1000
-    rag_chunk_size = st.sidebar.number_input("RAG Chunk Size", min_value=100, max_value=10000, value=rag_chunk_size_default)
-
-    # RAG chunk overlap
-    rag_chunk_overlap_default = 100
-    rag_chunk_overlap = st.sidebar.number_input("RAG Chunk Overlap", min_value=10, max_value=1000, value=rag_chunk_overlap_default)
+    instructions = st.sidebar.text_area("GPT Instructions", instructions_default)
 
     # Initialize session state for embeddings and FAISS index
     if 'embeddings' not in st.session_state:
