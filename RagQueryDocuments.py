@@ -13,6 +13,9 @@ import time
 # https://docs.python.org/3/library/datetime.html
 from datetime import datetime
 
+# https://docs.python.org/3/library/time.html
+import html
+
 # https://streamlit.io/
 # https://docs.streamlit.io/develop/api-reference/text
 import streamlit as st
@@ -61,9 +64,13 @@ import xml.etree.ElementTree as ET
 #
 # PDF to Markdown
 # https://pypi.org/project/marker-pdf/
-
+#
+# FAISS on GPU
+# https://github.com/facebookresearch/faiss/wiki/Running-on-GPUs
 
 def main():
+    timetrace_init()
+
     # Application header
     st.set_page_config(page_title="Query Documents", page_icon="🙋‍♂️", layout="centered", menu_items={'About': 'https://abiro.com'})   
     st.title("📄 Query Documents")
@@ -121,7 +128,8 @@ def main():
     temperature = st.sidebar.slider("GPT Temperature", 0.0, 1.0, temperature_default, 0.1)
 
     # Input for instructions
-    instructions_default = "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response. If the question is given in a non-English language use that language in the response."
+    instructions_default = "You are an AI assistant. Use the information provided below to answer the question. If you are uncertain, say so instead of guessing a response."
+    #  (If the question is given in a non-English language use that language in the response.)
     instructions = st.sidebar.text_area("GPT Instructions", instructions_default)
 
     # Initialize session state for embeddings and FAISS index
@@ -148,17 +156,25 @@ def main():
         st.session_state.processed_files = set()        
         init_faiss_index()
 
+    timetrace_sample("Processing starting")
+
     if uploaded_files:
         for uploaded_file in uploaded_files:
             if uploaded_file.name not in st.session_state.processed_files:
                 st.sidebar.write(f"📄 {uploaded_file.name}")
                 # Extract text based on file type
                 text = extract_text_from_file(uploaded_file)
+                timetrace_sample("Text extraction done")
+
                 if text:
                     # Split text into chunks
                     text_splitter = RecursiveCharacterTextSplitter(chunk_size=rag_chunk_size, chunk_overlap=rag_chunk_overlap)
                     chunks = text_splitter.split_text(text)
+                    timetrace_sample("Text splitting done")
+
                     add_texts_to_faiss(chunks, st.session_state.embeddings)
+                    timetrace_sample("FAISS adding done")
+
                     st.sidebar.success(f"Processed {uploaded_file.name} successfully!")
                     st.session_state.processed_files.add(uploaded_file.name)
                 else:
@@ -177,15 +193,18 @@ def main():
     # Query input
     st.header("🙋‍♂️ Question")
     user_query = st.text_input("Type your question here:")
-    verbose = st.checkbox("Verbose", help="Check this if you want intermediate information")
+    st.session_state.verbose = st.checkbox("Verbose", help="Check this if you want intermediate information and a timetrace")
 
     if st.button("Query") and user_query:
         with st.spinner("Querying..."):
             client = OpenAI(api_key=openai_api_key)
-            answer = generate_answer(client, selected_gpt_value, temperature, instructions, user_query, verbose, st.session_state.embeddings, st.session_state.faiss_index, st.session_state.texts)
+            answer = generate_answer(client, selected_gpt_value, temperature, instructions, user_query, st.session_state.verbose, st.session_state.embeddings, st.session_state.faiss_index, st.session_state.texts)
+            timetrace_sample("GPT query done")
         
         st.header("👨‍🏫 Answer")
         st.write(answer)
+
+    timetrace_sample("Processing done")
 
 
 # Initialize FAISS index with the dimensionality from embeddings
@@ -335,6 +354,7 @@ def generate_answer(client, model, temperature, instructions, query, verbose, em
     # Embed the query
     query_embedding = embeddings.embed_query(query)
     query_embedding_np = np.array([query_embedding]).astype('float32')
+    timetrace_sample("Embedding query done")    
 
     # Number of top documents to retrieve
     k = 20
@@ -342,6 +362,7 @@ def generate_answer(client, model, temperature, instructions, query, verbose, em
     # Search FAISS index
     # TODO Why are duplicates included? Same phrase multiple times?
     distances, indices = faiss_index.search(query_embedding_np, k)
+    timetrace_sample("FAISS search done")
 
     if verbose:
         st.header("🔎 Search")
@@ -351,7 +372,7 @@ def generate_answer(client, model, temperature, instructions, query, verbose, em
     # Build array of text snippets with lowest distances
     # TODO Combine snippets if they are adjacent (remove overlap)
     retrieved_texts = [texts[idx] for idx in indices[0] if idx < len(texts)]
-
+    timetrace_sample("Text collation done")
     if not retrieved_texts:
         return "No relevant information found in the uploaded documents."
 
@@ -389,15 +410,46 @@ def query_openai(client, model, temperature, prompt):
         return f"Error generating answer: {e}"
 
 
-# Main
+# Timetrace
+timetrace_previous = 0
+timetrace_samples = []
+
+def timetrace_init():
+    global timetrace_previous
+    global timetrace_samples
+
+    timetrace_previous = time.time()
+    timetrace_samples = []
+
+def timetrace_sample(note):
+    global timetrace_previous
+    global timetrace_samples
+
+    current = time.time()
+    timetrace_samples.append(str(round(current - timetrace_previous, 3)) + ": " + note)
+    timetrace_previous = current
+
+
+def timetrace_show():
+    global timetrace_samples
+
+    st.header("⏰ Timetrace")
+
+    st.markdown('\n'.join([f"* {item}" for item in timetrace_samples]))
+
+    
+# Launch
 
 main()
+
+if st.session_state.verbose:
+    timetrace_show()
 
 # Footer
 
 current_year = datetime.now().year
 
-st.markdown(f"""
+st.html(f"""
 <style>
     .footer {{
 
@@ -414,4 +466,4 @@ st.markdown(f"""
     <a href="https://abiro.com/about/privacy-policy/" target="_blank" class="footer-link">Privacy Policy</a>. 
     <a href="https://apps.abiro.com/" target="_blank" class="footer-link">Other Applications</a>.
 </footer>
-""", unsafe_allow_html=True)
+""")
