@@ -441,6 +441,7 @@ def timetrace_show():
 # Launch
 
 timetrace_init()
+st.session_state.verbose = False
 
 timetrace_sample("Processing starting")
 
