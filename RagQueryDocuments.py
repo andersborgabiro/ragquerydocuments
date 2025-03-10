@@ -69,8 +69,6 @@ import xml.etree.ElementTree as ET
 # https://github.com/facebookresearch/faiss/wiki/Running-on-GPUs
 
 def main():
-    timetrace_init()
-
     # Application header
     st.set_page_config(page_title="Query Documents", page_icon="🙋‍♂️", layout="centered", menu_items={'About': 'https://abiro.com'})   
     st.title("📄 Query Documents")
@@ -89,6 +87,8 @@ def main():
         st.info("Enter a valid OpenAI API Key.", icon="ℹ️")
         return
 
+    # SIDEBAR
+
     st.sidebar.header("Configuration")
 
     # Embedding model options with display names and values
@@ -102,11 +102,11 @@ def main():
 
     # RAG chunk size
     rag_chunk_size_default = 1000
-    rag_chunk_size = st.sidebar.number_input("Embedding Chunk Size", min_value=100, max_value=10000, value=rag_chunk_size_default)
+    rag_chunk_size = st.sidebar.number_input("Embedding Chunk Size", min_value=100, max_value=10000, step=100, value=rag_chunk_size_default)
 
     # RAG chunk overlap
     rag_chunk_overlap_default = 100
-    rag_chunk_overlap = st.sidebar.number_input("Embedding Chunk Overlap", min_value=10, max_value=1000, value=rag_chunk_overlap_default)    
+    rag_chunk_overlap = st.sidebar.number_input("Embedding Chunk Overlap", min_value=10, max_value=1000, step=10, value=rag_chunk_overlap_default)    
 
     # GPT Model options with display names and values
     gpt_options = {
@@ -132,6 +132,8 @@ def main():
     #  (If the question is given in a non-English language use that language in the response.)
     instructions = st.sidebar.text_area("GPT Instructions", instructions_default)
 
+    st.session_state.verbose = st.sidebar.checkbox("Verbose", help="Check this if you want intermediate information and a timetrace")
+
     # Initialize session state for embeddings and FAISS index
     if 'embeddings' not in st.session_state:
         st.session_state.embeddings = OpenAIEmbeddings(model=selected_embedding_value, openai_api_key=openai_api_key)
@@ -148,15 +150,14 @@ def main():
     if 'processed_files' not in st.session_state:
         st.session_state.processed_files = set()
 
-    # Sidebar for uploading files
     st.sidebar.header("Upload Files")
-    uploaded_files = st.sidebar.file_uploader("Choose files", type=["pdf", "txt", "md", "rtf", "docx", "pptx", "xlsx", "html", "htm", "json", "xml"], accept_multiple_files=True)
 
+    uploaded_files = st.sidebar.file_uploader("Choose files", type=["pdf", "txt", "md", "rtf", "docx", "pptx", "xlsx", "html", "htm", "json", "xml"], accept_multiple_files=True)
     if (len(uploaded_files) < len(st.session_state.processed_files)):
         st.session_state.processed_files = set()        
         init_faiss_index()
 
-    timetrace_sample("Processing starting")
+    timetrace_sample("Initialization done")
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
@@ -193,7 +194,6 @@ def main():
     # Query input
     st.header("🙋‍♂️ Question")
     user_query = st.text_input("Type your question here:")
-    st.session_state.verbose = st.checkbox("Verbose", help="Check this if you want intermediate information and a timetrace")
 
     if st.button("Query") and user_query:
         with st.spinner("Querying..."):
@@ -203,8 +203,6 @@ def main():
         
         st.header("👨‍🏫 Answer")
         st.write(answer)
-
-    timetrace_sample("Processing done")
 
 
 # Initialize FAISS index with the dimensionality from embeddings
@@ -435,12 +433,20 @@ def timetrace_show():
 
     st.header("⏰ Timetrace")
 
+    st.write("Time in seconds.")
+
     st.markdown('\n'.join([f"* {item}" for item in timetrace_samples]))
 
     
 # Launch
 
+timetrace_init()
+
+timetrace_sample("Processing starting")
+
 main()
+
+timetrace_sample("Processing done")
 
 if st.session_state.verbose:
     timetrace_show()
