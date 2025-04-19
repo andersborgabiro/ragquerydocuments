@@ -110,11 +110,11 @@ def main():
         "O1": "o1",
         "O1 Preview": "o1-preview",
         "O1 Mini": "o1-mini",
+        "GPT-4.1": "gpt-4.1",
+        "GPT-4.1 Mini": "gpt-4.1-mini",
+        "GPT-4.1 Nano": "gpt-4.1-nano",
         "GPT-4o": "gpt-4o",
-        "GPT-4o Mini": "gpt-4o-mini",
-        "GPT-4 Turbo": "gpt-4-turbo",
-        "GPT-4": "gpt-4",
-        "GPT-3.5 Turbo": "gpt-3.5-turbo"
+        "GPT-4o Mini": "gpt-4o-mini"
     }
     selected_gpt_display_default = 4
     selected_gpt_display = st.sidebar.selectbox("GPT Model", list(gpt_options.keys()), index=selected_gpt_display_default)
