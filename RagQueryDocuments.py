@@ -21,7 +21,7 @@ import html
 import streamlit as st
 
 # https://www.langchain.com/
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # https://python.langchain.com/docs/integrations/text_embedding/openai/
 from langchain_openai import OpenAIEmbeddings
