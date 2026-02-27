@@ -18,7 +18,7 @@ BYOK (Bring Your Own Key) applies. Only OpenAI is supported, so get a key at htt
 # Start
 
 - Run run.bat/cmd to launch the application.
-- A browser view shoud be automatically opened. If not, the application is accessed at http://localhost:8501/.
+- A browser view should be automatically opened. If not, the application is accessed at http://localhost:8501/.
 
 # Use
 
